@@ -23,18 +23,18 @@ public class ReservationController {
 
     private final ReservationService reservationService;
 
+    @GetMapping("/available-dates")
+    public ResponseEntity<AvailableDateResponse> getAvailableDates() {
+        final AvailableDateResponse results = reservationService.getReservationOptions();
+        return ResponseEntity.ok(results);
+    }
+
     @GetMapping(path = "/available-times")
     public ResponseEntity<List<ReservationTimeStatusResponse>> getReservationTimeStatuses(
             @RequestParam("date") LocalDate date,
             @RequestParam("themeId") Long themeId
     ) {
         final List<ReservationTimeStatusResponse> results = reservationService.getReservationTimeStatuses(date, themeId);
-        return ResponseEntity.ok(results);
-    }
-
-    @GetMapping("/available-dates")
-    public ResponseEntity<AvailableDateResponse> getAvailableDates() {
-        final AvailableDateResponse results = reservationService.getReservationOptions();
         return ResponseEntity.ok(results);
     }
 

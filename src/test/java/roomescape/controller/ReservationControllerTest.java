@@ -1,6 +1,9 @@
 package roomescape.controller;
 
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,7 +65,7 @@ class ReservationControllerTest {
                 .jsonPath().getObject(".", AvailableDateResponse.class);
 
         final LocalDate expectedStartDate = LocalDate.of(2026, 05, 01);
-        final LocalDate expectedEndDate = expectedStartDate.plusDays(14 - 1);
+        final LocalDate expectedEndDate = LocalDate.of(2026, 05, 14);
 
         final List<LocalDate> actualDates = responses.dates();
 
@@ -125,6 +128,36 @@ class ReservationControllerTest {
 
     @Test
     @Sql("/clear.sql")
+    void 예약_추가() {
+        jdbcTemplate.update("INSERT INTO reservation_time (start_at, end_at) VALUES (?, ?)", "10:00", "10:30");
+        jdbcTemplate.update("INSERT INTO theme (name, description, thumbnail_url) VALUES (?, ?, ?)", "링", "공포 테마", "http:~");
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("name", "브라운");
+        params.put("date", "2026-08-05");
+        params.put("timeId", 1);
+        params.put("themeId", 1);
+
+        ReservationResponse response = RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(params)
+                .when().post("/reservations")
+                .then().log().all()
+                .statusCode(201).extract()
+                .jsonPath().getObject(".", ReservationResponse.class);
+
+        assertThat(response.id()).isEqualTo(1);
+        assertThat(response.name()).isEqualTo("브라운");
+        assertThat(response.date()).isEqualTo("2026-08-05");
+        assertThat(response.time().id()).isEqualTo(1);
+        assertThat(response.theme().id()).isEqualTo(1);
+
+        Integer count = jdbcTemplate.queryForObject("SELECT count(*) from reservation", Integer.class);
+        assertThat(count).isEqualTo(1);
+    }
+
+    @Test
+    @Sql("/clear.sql")
     void 사용자가_본인의_예약을_취소() {
         jdbcTemplate.update("INSERT INTO reservation_time (start_at, end_at) VALUES (?, ?)", "10:00", "10:30");
         jdbcTemplate.update("INSERT INTO theme (name, description, thumbnail_url) VALUES (?, ?, ?)", "링", "공포 테마", "http:~");
@@ -134,6 +167,9 @@ class ReservationControllerTest {
                 .when().delete("/reservations/1?name=브라운")
                 .then().log().all()
                 .statusCode(204);
+
+        Integer count = jdbcTemplate.queryForObject("SELECT count(*) from reservation", Integer.class);
+        assertThat(count).isZero();
     }
 
     @Test
