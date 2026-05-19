@@ -2,6 +2,18 @@
 
 const $ = id => document.getElementById(id);
 
+// ===== Error Code Mapping =====
+const ERROR_MESSAGES = {
+  'TIME_HAS_RESERVATION': '해당 시간대에 예약된 내역이 있어 삭제할 수 없습니다.',
+  'INVALID_INPUT_VALUE': '입력 정보가 올바르지 않습니다. 다시 한 번 확인해 주세요.',
+  'START_TIME_NULL': '시작 시간을 입력해 주세요.',
+  'END_TIME_NULL': '종료 시간을 입력해 주세요.',
+  'THEME_NAME_NULL_OR_BLANK': '테마 이름을 입력해 주세요.',
+  'DESCRIPTION_NULL_OR_BLANK': '테마 설명을 입력해 주세요.',
+  'THUMBNAIL_URL_NULL_OR_BLANK': '테마 썸네일 URL을 입력해 주세요.',
+  'DEFAULT': '알 수 없는 오류가 발생했습니다. 문제가 지속되면 시스템 관리자에게 문의해주세요.'
+};
+
 function showToast(msg, type = 'default') {
   const el = document.createElement('div');
   el.className = `toast ${type}`;
@@ -15,26 +27,17 @@ const api = {
   async request(url, options) {
     const res = await fetch(url, options);
 
-    // HTTP 상태 코드가 200~299가 아닐 경우 (에러 발생 시)
     if (!res.ok) {
-      let errorMsg = `요청 실패 (${res.status})`;
       try {
-        // 백엔드의 GlobalExceptionHandler가 내려준 JSON 파싱
         const errorData = await res.json();
-        // ErrorResponse record의 "message" 필드가 있다면 그걸 사용!
-        if (errorData.message) {
-          errorMsg = errorData.message;
-        }
+        const errorCode = errorData.code || 'DEFAULT';
+        const errorMessage = ERROR_MESSAGES[errorCode] || ERROR_MESSAGES['DEFAULT'];
+        throw new Error(errorMessage);
       } catch (e) {
-        // JSON 파싱에 실패하면 단순 텍스트로 대체
-        const text = await res.text();
-        if (text) errorMsg = text;
+        throw new Error(e.message || ERROR_MESSAGES['DEFAULT']);
       }
-      // UI 계층으로 에러 메시지를 던짐
-      throw new Error(errorMsg);
     }
 
-    // 204 No Content 처리 (DELETE 요청 시 JSON 파싱 에러 방지)
     if (res.status === 204) return null;
     return res.json();
   },
@@ -79,66 +82,87 @@ function switchPanel(panel) {
 async function loadReservations() {
   const tbody = $('admin-reservations-tbody');
   tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">불러오는 중...</td></tr>`;
-  const data = await api.get('/admin/reservations');
-  if (!data.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">예약 내역이 없습니다.</td></tr>`;
-    return;
+  try {
+    const data = await api.get('/admin/reservations');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">예약 내역이 없습니다.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map(r => `
+      <tr>
+        <td>${r.id}</td><td>${r.name}</td><td>${r.date}</td>
+        <td>${formatTime(r.time.startAt)}</td><td>${r.theme.name}</td>
+        <td><button class="btn-delete" onclick="deleteReservation(${r.id})">삭제</button></td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    showToast(e.message, 'error');
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">예약 목록을 불러오지 못했습니다.</td></tr>`;
   }
-  tbody.innerHTML = data.map(r => `
-    <tr>
-      <td>${r.id}</td><td>${r.name}</td><td>${r.date}</td>
-      <td>${formatTime(r.time.startAt)}</td><td>${r.theme.name}</td>
-      <td><button class="btn-delete" onclick="deleteReservation(${r.id})">삭제</button></td>
-    </tr>
-  `).join('');
 }
 
 async function deleteReservation(id) {
-  if (!confirm('이 예약을 삭제하시겠습니까?')) return;
-  await api.del(`/admin/reservations/${id}`);
-  showToast('예약이 삭제되었습니다.', 'success');
-  loadReservations();
+  if (!confirm('정말 이 예약을 삭제하시겠습니까? 삭제된 예약은 복구할 수 없습니다.')) return;
+  try {
+    await api.del(`/admin/reservations/${id}`);
+    showToast('예약 내역이 성공적으로 삭제되었습니다.', 'success');
+    loadReservations();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 }
 
 // ===== Times =====
 async function loadTimes() {
   const tbody = $('admin-times-tbody');
   tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">불러오는 중...</td></tr>`;
-  const data = await api.get('/times');
-  if (!data.length) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">등록된 시간대가 없습니다.</td></tr>`;
-    return;
+  try {
+    const data = await api.get('/times');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">등록된 시간대가 없습니다.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map(t => `
+      <tr>
+        <td>${t.id}</td><td>${formatTime(t.startAt)}</td><td>${formatTime(t.endAt)}</td>
+        <td><button class="btn-delete" onclick="deleteTime(${t.id})">삭제</button></td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    showToast(e.message, 'error');
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">시간대 목록을 불러오지 못했습니다.</td></tr>`;
   }
-  tbody.innerHTML = data.map(t => `
-    <tr>
-      <td>${t.id}</td><td>${formatTime(t.startAt)}</td><td>${formatTime(t.endAt)}</td>
-      <td><button class="btn-delete" onclick="deleteTime(${t.id})">삭제</button></td>
-    </tr>
-  `).join('');
 }
 
 async function addTime() {
   const startAt = $('new-time-start').value;
   const endAt = $('new-time-end').value;
 
-  if (!startAt || !endAt) {
-    showToast('시작 시간과 종료 시간을 모두 입력해주세요.', 'error');
+  if (!startAt) {
+    showToast(ERROR_MESSAGES['START_TIME_NULL'], 'error');
+    return;
+  }
+  if (!endAt) {
+    showToast(ERROR_MESSAGES['END_TIME_NULL'], 'error');
     return;
   }
 
-  await api.post('/times', { startAt, endAt });
-  showToast('시간대가 추가되었습니다.', 'success');
-
-  $('new-time-start').value = '';
-  $('new-time-end').value = '';
-  loadTimes();
+  try {
+    await api.post('/times', { startAt, endAt });
+    showToast('새로운 시간대가 성공적으로 추가되었습니다.', 'success');
+    $('new-time-start').value = '';
+    $('new-time-end').value = '';
+    loadTimes();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 }
 
 async function deleteTime(id) {
-  if (!confirm('이 시간대를 삭제하시겠습니까?')) return;
+  if (!confirm('정말 이 시간대를 삭제하시겠습니까? 관련된 설정에 영향을 미칠 수 있습니다.')) return;
   try {
     await api.del(`/times/${id}`);
-    showToast('시간대가 삭제되었습니다.', 'success');
+    showToast('시간대가 성공적으로 삭제되었습니다.', 'success');
     loadTimes();
   } catch (e) {
     showToast(e.message, 'error');
@@ -149,37 +173,53 @@ async function deleteTime(id) {
 async function loadThemes() {
   const tbody = $('admin-themes-tbody');
   tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">불러오는 중...</td></tr>`;
-  const data = await api.get('/themes');
-  if (!data.length) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">등록된 테마가 없습니다.</td></tr>`;
-    return;
+  try {
+    const data = await api.get('/themes');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">등록된 테마가 없습니다.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map(t => `
+      <tr>
+        <td>${t.id}</td>
+        <td><img style="width:28px;height:28px;border-radius:4px;object-fit:cover;vertical-align:middle;margin-right:8px;background:var(--surface-3)" src="${t.thumbnailUrl}" alt="${t.name}" onerror="this.style.display='none'">${t.name}</td>
+        <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.description}</td>
+        <td><button class="btn-delete" onclick="deleteTheme(${t.id})">삭제</button></td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    showToast(e.message, 'error');
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">테마 목록을 불러오지 못했습니다.</td></tr>`;
   }
-  tbody.innerHTML = data.map(t => `
-    <tr>
-      <td>${t.id}</td>
-      <td><img style="width:28px;height:28px;border-radius:4px;object-fit:cover;vertical-align:middle;margin-right:8px;background:var(--surface-3)" src="${t.thumbnailUrl}" alt="${t.name}" onerror="this.style.display='none'">${t.name}</td>
-      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.description}</td>
-      <td><button class="btn-delete" onclick="deleteTheme(${t.id})">삭제</button></td>
-    </tr>
-  `).join('');
 }
 
 async function addTheme() {
   const name         = $('new-theme-name').value.trim();
   const description  = $('new-theme-desc').value.trim();
   const thumbnailUrl = $('new-theme-thumb').value.trim();
-  if (!name || !description || !thumbnailUrl) { showToast('모든 항목을 입력해주세요.', 'error'); return; }
-  await api.post('/themes', { name, description, thumbnailUrl });
-  showToast('테마가 추가되었습니다.', 'success');
-  $('new-theme-name').value = ''; $('new-theme-desc').value = ''; $('new-theme-thumb').value = '';
-  loadThemes();
+  if (!name) { showToast(ERROR_MESSAGES['THEME_NAME_NULL_OR_BLANK'], 'error'); return; }
+  if (!description) { showToast(ERROR_MESSAGES['DESCRIPTION_NULL_OR_BLANK'], 'error'); return; }
+  if (!thumbnailUrl) { showToast(ERROR_MESSAGES['THUMBNAIL_URL_NULL_OR_BLANK'], 'error'); return; }
+  
+  try {
+    await api.post('/themes', { name, description, thumbnailUrl });
+    showToast('새로운 테마가 성공적으로 추가되었습니다.', 'success');
+    $('new-theme-name').value = ''; $('new-theme-desc').value = ''; $('new-theme-thumb').value = '';
+    loadThemes();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 }
 
 async function deleteTheme(id) {
-  if (!confirm('이 테마를 삭제하시겠습니까?')) return;
-  await api.del(`/themes/${id}`);
-  showToast('테마가 삭제되었습니다.', 'success');
-  loadThemes();
+  if (!confirm('정말 이 테마를 삭제하시겠습니까? 관련된 데이터가 모두 삭제될 수 있습니다.')) return;
+  try {
+    await api.del(`/themes/${id}`);
+    showToast('테마가 성공적으로 삭제되었습니다.', 'success');
+    loadThemes();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 }
 
 // ===== Init =====

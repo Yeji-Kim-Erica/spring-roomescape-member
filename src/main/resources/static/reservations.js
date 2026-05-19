@@ -14,6 +14,15 @@ const state = {
 
 const $ = id => document.getElementById(id);
 
+// ===== Error Code Mapping =====
+const ERROR_MESSAGES = {
+  'TIME_ALREADY_RESERVED': '선택하신 시간은 이미 예약이 마감되었습니다. 다른 시간을 선택해 주세요.',
+  'DATE_ALREADY_PASSED': '지난 날짜는 예약할 수 없습니다. 오늘 이후의 날짜를 선택해 주세요.',
+  'INVALID_INPUT_VALUE': '입력 정보가 올바르지 않습니다. 날짜, 시간, 이름 형식을 다시 확인해 주세요.',
+  'PERSON_NAME_NULL_OR_BLANK': '예약자 이름을 입력해 주세요.',
+  'DEFAULT': '알 수 없는 오류가 발생했습니다. 문제가 지속되면 관리자에게 문의해주세요.'
+};
+
 // ===== Toast =====
 function showToast(msg, type = 'default') {
   const el = document.createElement('div');
@@ -28,26 +37,18 @@ const api = {
   async request(url, options) {
     const res = await fetch(url, options);
 
-    // HTTP 상태 코드가 200~299가 아닐 경우 (에러 발생 시)
     if (!res.ok) {
-      let errorMsg = `요청 실패 (${res.status})`;
       try {
-        // 백엔드의 GlobalExceptionHandler가 내려준 JSON 파싱
         const errorData = await res.json();
-        // ErrorResponse record의 "message" 필드가 있다면 그걸 사용!
-        if (errorData.message) {
-          errorMsg = errorData.message;
-        }
+        const errorCode = errorData.code || 'DEFAULT';
+        const errorMessage = ERROR_MESSAGES[errorCode] || ERROR_MESSAGES['DEFAULT'];
+        throw new Error(errorMessage);
       } catch (e) {
-        // JSON 파싱에 실패하면 단순 텍스트로 대체
-        const text = await res.text();
-        if (text) errorMsg = text;
+        // JSON 파싱 실패 혹은 다른 네트워크 오류
+        throw new Error(e.message || ERROR_MESSAGES['DEFAULT']);
       }
-      // UI 계층으로 에러 메시지를 던짐
-      throw new Error(errorMsg);
     }
 
-    // 204 No Content 처리 (DELETE 요청 시 JSON 파싱 에러 방지)
     if (res.status === 204) return null;
     return res.json();
   },
@@ -124,16 +125,20 @@ function toISODate(date) {
 
 // ===== Themes & Dates (초기 데이터 로드) =====
 async function loadThemes() {
-  const [datesData, themesData] = await Promise.all([
-    api.get('/reservations/available-dates'),
-    api.get('/themes')
-  ]);
+  try {
+    const [datesData, themesData] = await Promise.all([
+      api.get('/reservations/available-dates'),
+      api.get('/themes')
+    ]);
 
-  state.availableDates = datesData.dates || datesData || [];
-  state.themes = themesData || [];
+    state.availableDates = datesData.dates || datesData || [];
+    state.themes = themesData || [];
 
-  renderCalendar();
-  renderThemes();
+    renderCalendar();
+    renderThemes();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 }
 
 function renderThemes() {
@@ -180,29 +185,34 @@ async function loadTimeSlots() {
   container.innerHTML = `<div class="time-grid">${[1,2,3,4].map(() =>
     `<div class="skeleton" style="height:60px"></div>`).join('')}</div>`;
 
-  const times = await api.get(`/reservations/available-times?date=${selectedDate}&themeId=${selectedThemeId}`);
-  state.selectedTimeId = null;
-  state.selectedTimeLabel = null;
+  try {
+    const times = await api.get(`/reservations/available-times?date=${selectedDate}&themeId=${selectedThemeId}`);
+    state.selectedTimeId = null;
+    state.selectedTimeLabel = null;
 
-  if (!times || times.length === 0) {
-    container.innerHTML = `<div class="empty-state"><p>⏰</p><p>예약 가능한<br>시간대가 없습니다.</p></div>`;
-    return;
+    if (!times || times.length === 0) {
+      container.innerHTML = `<div class="empty-state"><p>⏰</p><p>예약 가능한<br>시간대가 없습니다.</p></div>`;
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'time-grid';
+    times.forEach(t => {
+      const slot = document.createElement('div');
+      slot.className = 'time-slot' + (t.reserved ? ' reserved' : '');
+      const label = formatTime(t.startAt);
+      slot.innerHTML = `<div>${label}</div><div class="time-slot-badge">${t.reserved ? 'RESERVED' : 'AVAILABLE'}</div>`;
+      if (!t.reserved) slot.addEventListener('click', () => selectTime(t.id, label, slot));
+      grid.appendChild(slot);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(grid);
+    updateCTAInfo();
+  } catch (e) {
+    showToast(e.message, 'error');
+    container.innerHTML = `<div class="empty-state"><p>⚠️</p><p>시간 정보를<br>불러오지 못했습니다.</p></div>`;
   }
-
-  const grid = document.createElement('div');
-  grid.className = 'time-grid';
-  times.forEach(t => {
-    const slot = document.createElement('div');
-    slot.className = 'time-slot' + (t.reserved ? ' reserved' : '');
-    const label = formatTime(t.startAt);
-    slot.innerHTML = `<div>${label}</div><div class="time-slot-badge">${t.reserved ? 'RESERVED' : 'AVAILABLE'}</div>`;
-    if (!t.reserved) slot.addEventListener('click', () => selectTime(t.id, label, slot));
-    grid.appendChild(slot);
-  });
-
-  container.innerHTML = '';
-  container.appendChild(grid);
-  updateCTAInfo();
 }
 
 function selectTime(id, label, el) {
@@ -244,7 +254,10 @@ function closeModal() { $('booking-modal').classList.remove('open'); }
 
 async function submitBooking() {
   const name = $('booking-name').value.trim();
-  if (!name) { showToast('이름을 입력해주세요.', 'error'); return; }
+  if (!name) {
+    showToast(ERROR_MESSAGES['PERSON_NAME_NULL_OR_BLANK'], 'error');
+    return;
+  }
 
   const btn = $('confirm-booking-btn');
   btn.disabled = true; btn.textContent = '예약 중...';
@@ -258,7 +271,7 @@ async function submitBooking() {
     state.selectedTimeId = null; state.selectedTimeLabel = null;
     loadTimeSlots(); updateCTAInfo();
   } catch (e) {
-    showToast('예약에 실패했습니다. ' + e.message, 'error');
+    showToast(e.message, 'error');
   } finally {
     btn.disabled = false; btn.textContent = '예약하기';
   }
