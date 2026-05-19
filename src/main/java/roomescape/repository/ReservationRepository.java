@@ -10,6 +10,8 @@ import org.springframework.stereotype.Repository;
 import roomescape.domain.Reservation;
 import roomescape.domain.ReservationTime;
 import roomescape.domain.Theme;
+import roomescape.exception.ErrorCode;
+import roomescape.exception.KeyGenerationException;
 import roomescape.repository.dto.ReservationTimesWithStatus;
 
 import java.sql.*;
@@ -188,7 +190,7 @@ public class ReservationRepository {
         final Number generatedKey = keyHolder.getKey();
 
         if (generatedKey == null) {
-            throw new IllegalStateException("생성된 id를 가져오지 못했습니다.");
+            throw new KeyGenerationException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
         return generatedKey.longValue();

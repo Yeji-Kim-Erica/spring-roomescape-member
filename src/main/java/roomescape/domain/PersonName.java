@@ -1,6 +1,8 @@
 package roomescape.domain;
 
 import lombok.Getter;
+import roomescape.exception.ErrorCode;
+import roomescape.exception.ReservationException;
 
 @Getter
 public class PersonName {
@@ -14,7 +16,7 @@ public class PersonName {
 
     private void validate(final String value) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("예약자 이름은 비워둘 수 없습니다.");
+            throw new ReservationException(ErrorCode.PERSON_NAME_NULL_OR_BLANK);
         }
     }
 }

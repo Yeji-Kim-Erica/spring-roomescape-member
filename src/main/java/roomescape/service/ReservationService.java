@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import roomescape.domain.Reservation;
 import roomescape.domain.ReservationTime;
 import roomescape.domain.Theme;
+import roomescape.exception.ErrorCode;
+import roomescape.exception.ReservationException;
 import roomescape.repository.ReservationRepository;
 import roomescape.repository.ReservationTimeRepository;
 import roomescape.repository.ThemeRepository;
@@ -72,7 +74,7 @@ public class ReservationService {
         final boolean deleted = reservationRepository.deleteById(reservationId);
 
         if (!deleted) {
-            throw new IllegalArgumentException("존재하지 않는 예약입니다.");
+            throw new ReservationException(ErrorCode.RESERVATION_NOT_FOUND);
         }
     }
 
@@ -154,23 +156,23 @@ public class ReservationService {
 
     private Reservation getReservation(final Long reservationId) {
         return reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
+                .orElseThrow(() -> new ReservationException(ErrorCode.RESERVATION_NOT_FOUND));
     }
 
     private ReservationTime getReservationTime(final Long timeId) {
         return reservationTimeRepository.findById(timeId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약 시간입니다."));
+                .orElseThrow(() -> new ReservationException(ErrorCode.TIME_NOT_FOUND));
     }
 
     private Theme getTheme(final Long themeId) {
         return themeRepository.findById(themeId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 테마입니다."));
+                .orElseThrow(() -> new ReservationException(ErrorCode.THEME_NOT_FOUND));
     }
 
     private void validateDate(final LocalDate date) {
         final LocalDate today = LocalDate.now(clock);
         if (date.isBefore(today)) {
-            throw new IllegalArgumentException("이미 지난 날짜입니다.");
+            throw new ReservationException(ErrorCode.DATE_ALREADY_PASSED);
         }
     }
 
@@ -178,7 +180,7 @@ public class ReservationService {
         final LocalDate today = LocalDate.now(clock);
         final LocalTime now = LocalTime.now(clock);
         if (date.equals(today) && reservationTime.isBefore(now)) {
-            throw new IllegalArgumentException("이미 지난 시간대입니다.");
+            throw new ReservationException(ErrorCode.TIME_ALREADY_PASSED);
         }
     }
 
@@ -190,7 +192,7 @@ public class ReservationService {
         );
 
         if (isAlreadyReserved) {
-            throw new IllegalArgumentException("예약이 마감되었습니다.");
+            throw new ReservationException(ErrorCode.TIME_ALREADY_RESERVED);
         }
     }
 
@@ -199,7 +201,7 @@ public class ReservationService {
         final boolean isUserNameMatched = reservationOwnerName.equals(name);
 
         if (!isUserNameMatched) {
-            throw new IllegalArgumentException("예약자와 사용자 이름이 일치하지 않습니다.");
+            throw new ReservationException(ErrorCode.USER_NAME_NOT_MATCHED);
         }
     }
 }

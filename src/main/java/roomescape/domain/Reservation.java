@@ -4,6 +4,8 @@ import java.util.Objects;
 import lombok.Getter;
 
 import java.time.LocalDate;
+import roomescape.exception.ErrorCode;
+import roomescape.exception.ReservationException;
 
 @Getter
 public class Reservation {
@@ -23,9 +25,15 @@ public class Reservation {
         this.theme = theme;
     }
 
-    private void validateDate(final LocalDate date) {
+    private static void validateId(final Long id) {
+        if (id == null) {
+            throw new ReservationException(ErrorCode.RESERVATION_ID_NULL);
+        }
+    }
+
+    private static void validateDate(final LocalDate date) {
         if (date == null) {
-            throw new IllegalArgumentException("날짜는 비어있을 수 없습니다.");
+            throw new ReservationException(ErrorCode.DATE_NULL);
         }
     }
 
@@ -45,6 +53,7 @@ public class Reservation {
             final LocalDate date,
             final ReservationTime time,
             final Theme theme) {
+        validateId(id);
         return new Reservation(
                 id,
                 new PersonName(name),
@@ -55,26 +64,27 @@ public class Reservation {
     }
 
     public Reservation withId(final Long id) {
+        validateId(id);
         return new Reservation(
                 id,
-                name,
-                date,
-                time,
-                theme
+                this.name,
+                this.date,
+                this.time,
+                this.theme
         );
     }
 
     public Reservation modify(final LocalDate newDate, final ReservationTime newReservationTime) {
         return new Reservation(
-                id,
-                name,
-                Objects.requireNonNullElse(newDate, date),
-                Objects.requireNonNullElse(newReservationTime, time),
-                theme
+                this.id,
+                this.name,
+                Objects.requireNonNullElse(newDate, this.date),
+                Objects.requireNonNullElse(newReservationTime, this.time),
+                this.theme
         );
     }
 
     public String getName() {
-        return name.getName();
+        return this.name.getName();
     }
 }

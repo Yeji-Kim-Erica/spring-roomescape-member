@@ -1,15 +1,19 @@
 package roomescape.service.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record ThemeCreateRequest(
-        @NotNull
+        @NotNull(message = "THEME_NAME_NULL_OR_BLANK")
+        @NotBlank(message = "THEME_NAME_NULL_OR_BLANK")
         String name,
 
-        @NotNull
+        @NotNull(message = "DESCRIPTION_NULL_OR_BLANK")
+        @NotBlank(message = "DESCRIPTION_NULL_OR_BLANK")
         String description,
 
-        @NotNull
+        @NotNull(message = "THUMBNAIL_URL_NULL_OR_BLANK")
+        @NotBlank(message = "THUMBNAIL_URL_NULL_OR_BLANK")
         String thumbnailUrl
 ) {
 }
