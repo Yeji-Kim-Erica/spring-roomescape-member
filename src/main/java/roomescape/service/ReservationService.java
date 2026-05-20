@@ -20,7 +20,6 @@ import roomescape.service.dto.response.ReservationTimeResponse;
 import roomescape.service.dto.response.ReservationTimeStatusResponse;
 import roomescape.service.dto.response.ThemeResponse;
 
-import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -31,7 +30,6 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationTimeRepository reservationTimeRepository;
     private final ThemeRepository themeRepository;
-    private final Clock clock;
 
     private static final int RESERVABLE_DAYS_RANGE = 14;
 
@@ -89,7 +87,7 @@ public class ReservationService {
     }
 
     public AvailableDateResponse getReservationOptions() {
-        LocalDate today = LocalDate.now(clock);
+        LocalDate today = LocalDate.now();
         List<LocalDate> dates = today.datesUntil(today.plusDays(RESERVABLE_DAYS_RANGE)).toList();
 
         return new AvailableDateResponse(dates);
@@ -170,15 +168,15 @@ public class ReservationService {
     }
 
     private void validateDate(final LocalDate date) {
-        final LocalDate today = LocalDate.now(clock);
+        final LocalDate today = LocalDate.now();
         if (date.isBefore(today)) {
             throw new ReservationException(ErrorCode.DATE_ALREADY_PASSED);
         }
     }
 
     private void validateReservationTime(final LocalDate date, final ReservationTime reservationTime) {
-        final LocalDate today = LocalDate.now(clock);
-        final LocalTime now = LocalTime.now(clock);
+        final LocalDate today = LocalDate.now();
+        final LocalTime now = LocalTime.now();
         if (date.equals(today) && reservationTime.isBefore(now)) {
             throw new ReservationException(ErrorCode.TIME_ALREADY_PASSED);
         }

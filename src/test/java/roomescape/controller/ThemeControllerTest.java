@@ -2,60 +2,26 @@ package roomescape.controller;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.jdbc.Sql;
+import roomescape.ClearDbTest;
 import roomescape.service.dto.response.ThemeResponse;
 
-import java.time.Clock;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@ClearDbTest
 class ThemeControllerTest {
 
     @Autowired
     JdbcTemplate jdbcTemplate;
 
-    @LocalServerPort
-    int port;
-
-    @BeforeEach
-    void setUp() {
-        RestAssured.port = port;
-    }
-
-    @TestConfiguration
-    static class FixedClockConfig {
-
-        @Bean
-        @Primary
-        Clock fixedClock() {
-            return Clock.fixed(
-                    LocalDate.of(2026, 5, 8)
-                            .atStartOfDay(ZoneId.of("Asia/Seoul"))
-                            .toInstant(),
-                    ZoneId.of("Asia/Seoul")
-            );
-        }
-    }
-
     @Test
-    @Sql("/clear.sql")
     void 전체_테마_조회() {
         jdbcTemplate.update("INSERT INTO theme (name, description, thumbnail_url) VALUES (?, ?, ?)", "링", "공포 테마", "http:~");
         jdbcTemplate.update("INSERT INTO theme (name, description, thumbnail_url) VALUES (?, ?, ?)", "해리포터", "판타지 테마", "http:~");
@@ -102,7 +68,6 @@ class ThemeControllerTest {
     }
 
     @Test
-    @Sql("/clear.sql")
     void 테마_추가() {
         Map<String, Object> params = new HashMap<>();
         params.put("name", "링");
@@ -127,7 +92,6 @@ class ThemeControllerTest {
     }
 
     @Test
-    @Sql("/clear.sql")
     void 테마_삭제() {
         jdbcTemplate.update("INSERT INTO theme (name, description, thumbnail_url) VALUES (?, ?, ?)", "링", "공포 테마", "http:~");
 
