@@ -14,10 +14,8 @@ public record ReservationModifyRequest(
         String name,
 
         @DateTimeFormat(pattern = "yyyy-MM-dd")
-        @NotNull(message = "DATE_NULL")
         LocalDate date,
 
-        @NotNull(message = "TIME_ID_NULL")
         Long timeId
 ) {
 }
