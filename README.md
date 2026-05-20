@@ -399,16 +399,17 @@ API 요청 실패 시, 클라이언트는 HTTP 상태 코드와 함께 다음과
 | 405 Method Not Allowed | `METHOD_NOT_ALLOWED` | 지원하지 않는 HTTP 메서드입니다. |
 
 ### 비즈니스 에러
-| HTTP 상태 코드 | `code` (ErrorCode) | `detail` (메시지) |
-|:---:|:---|:---|
-| 400 Bad Request | `TIME_ALREADY_RESERVED` | 해당 시간대에 이미 예약이 존재합니다. |
-| 400 Bad Request | `DATE_ALREADY_PASSED` | 이미 지난 날짜입니다. |
-| 400 Bad Request | `TIME_ALREADY_PASSED` | 이미 지난 시간입니다. |
+| HTTP 상태 코드 | `code` (ErrorCode)      | `detail` (메시지)          |
+|:---:|:------------------------|:------------------------|
+| 400 Bad Request | `TIME_ALREADY_RESERVED` | 해당 시간대에 이미 예약이 존재합니다.   |
+| 400 Bad Request | `DATE_ALREADY_PASSED`   | 이미 지난 날짜입니다.            |
+| 400 Bad Request | `TIME_ALREADY_PASSED`   | 이미 지난 시간입니다.            |
 | 403 Forbidden | `USER_NAME_NOT_MATCHED` | 예약자와 사용자 이름이 일치하지 않습니다. |
-| 404 Not Found | `THEME_NOT_FOUND` | 해당 테마 정보를 찾을 수 없습니다. |
-| 404 Not Found | `TIME_NOT_FOUND` | 해당 예약 시간 정보를 찾을 수 없습니다. |
-| 404 Not Found | `RESERVATION_NOT_FOUND` | 해당 예약 정보를 찾을 수 없습니다. |
-| 409 Conflict | `TIME_HAS_RESERVATION` | 해당 시간대에 잔여 예약이 존재합니다. |
+| 404 Not Found | `THEME_NOT_FOUND`       | 해당 테마 정보를 찾을 수 없습니다.    |
+| 404 Not Found | `TIME_NOT_FOUND`        | 해당 예약 시간 정보를 찾을 수 없습니다. |
+| 404 Not Found | `RESERVATION_NOT_FOUND` | 해당 예약 정보를 찾을 수 없습니다.    |
+| 409 Conflict | `TIME_HAS_RESERVATION`  | 해당 시간대에 잔여 예약이 존재합니다.   |
+| 409 Conflict | `THEME_HAS_RESERVATION` | 해당 테마에 잔여 예약이 존재합니다.    |
 
 ### 검증 에러 (400 Bad Request)
 | HTTP 상태 코드 | `code` (ErrorCode) | `detail` (메시지) |

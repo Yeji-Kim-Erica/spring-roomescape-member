@@ -21,6 +21,7 @@ public enum ErrorCode {
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 예약 정보를 찾을 수 없습니다."),
 
     TIME_HAS_RESERVATION(HttpStatus.CONFLICT, "해당 시간대에 잔여 예약이 존재합니다."),
+    THEME_HAS_RESERVATION(HttpStatus.CONFLICT, "해당 테마에 잔여 예약이 존재합니다."),
 
     // 검증 에러
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "입력값이 유효하지 않습니다."),

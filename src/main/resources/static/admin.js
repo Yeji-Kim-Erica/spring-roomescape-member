@@ -5,6 +5,7 @@ const $ = id => document.getElementById(id);
 // ===== Error Code Mapping =====
 const ERROR_MESSAGES = {
   'TIME_HAS_RESERVATION': '해당 시간대에 예약된 내역이 있어 삭제할 수 없습니다.',
+  'THEME_HAS_RESERVATION': '해당 테마에 예약된 내역이 있어 삭제할 수 없습니다.',
   'INVALID_INPUT_VALUE': '입력 정보가 올바르지 않습니다. 다시 한 번 확인해 주세요.',
   'START_TIME_NULL': '시작 시간을 입력해 주세요.',
   'END_TIME_NULL': '종료 시간을 입력해 주세요.',
@@ -212,7 +213,7 @@ async function addTheme() {
 }
 
 async function deleteTheme(id) {
-  if (!confirm('정말 이 테마를 삭제하시겠습니까? 관련된 데이터가 모두 삭제될 수 있습니다.')) return;
+  if (!confirm('정말 이 테마를 삭제하시겠습니까? 관련된 설정에 영향을 미칠 수 있습니다.')) return;
   try {
     await api.del(`/themes/${id}`);
     showToast('테마가 성공적으로 삭제되었습니다.', 'success');

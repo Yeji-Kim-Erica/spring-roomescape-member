@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import roomescape.domain.Theme;
 import roomescape.exception.ErrorCode;
 import roomescape.exception.ThemeException;
+import roomescape.repository.ReservationRepository;
 import roomescape.repository.ThemeRepository;
 import roomescape.service.dto.request.ThemeCreateRequest;
 import roomescape.service.dto.response.ThemeResponse;
@@ -17,6 +18,7 @@ import java.util.List;
 public class ThemeService {
 
     private final ThemeRepository themeRepository;
+    private final ReservationRepository reservationRepository;
 
     private static final int DATA_RANGE = 7;
 
@@ -33,6 +35,11 @@ public class ThemeService {
     }
 
     public void delete(final Long themeId) {
+        final boolean hasAnyOngoingReservation = reservationRepository.existsByThemeId(themeId);
+        if (hasAnyOngoingReservation) {
+            throw new ThemeException(ErrorCode.THEME_HAS_RESERVATION);
+        }
+
         boolean deleted = themeRepository.deleteById(themeId);
 
         if (!deleted) {

@@ -3,6 +3,7 @@ package roomescape.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -16,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import roomescape.domain.Theme;
 import roomescape.exception.ErrorCode;
 import roomescape.exception.ThemeException;
+import roomescape.repository.ReservationRepository;
 import roomescape.repository.ThemeRepository;
 import roomescape.service.dto.request.ThemeCreateRequest;
 import roomescape.service.dto.response.ThemeResponse;
@@ -25,6 +27,8 @@ class ThemeServiceTest {
 
     @Mock
     private ThemeRepository themeRepository;
+    @Mock
+    private ReservationRepository reservationRepository;
 
     @InjectMocks
     private ThemeService themeService;
@@ -58,6 +62,20 @@ class ThemeServiceTest {
 
         // then
         verify(themeRepository).deleteById(targetThemeId);
+    }
+
+    @Test
+    void 삭제하려는_테마에_이미_예약이_존재할_경우_예외발생() {
+        // given
+        Long targetThemeId = 1L;
+        given(reservationRepository.existsByThemeId(targetThemeId)).willReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> themeService.delete(targetThemeId))
+                .isInstanceOf(ThemeException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.THEME_HAS_RESERVATION);
+
+        verify(themeRepository, org.mockito.Mockito.never()).deleteById(anyLong());
     }
 
     @Test
