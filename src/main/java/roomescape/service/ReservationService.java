@@ -53,10 +53,10 @@ public class ReservationService {
 
     public ReservationResponse create(final ReservationCreateRequest data) {
         final LocalDate date = data.date();
-        validateDate(date);
+        validateFutureOrPresentDate(date);
         final Long timeId = data.timeId();
         final ReservationTime reservationTime = getReservationTime(timeId);
-        validateReservationTime(date, reservationTime);
+        validateFutureOrPresentTime(date, reservationTime);
         final Long themeId = data.themeId();
         final Theme theme = getTheme(themeId);
 
@@ -80,9 +80,9 @@ public class ReservationService {
         Reservation reservation = getReservation(reservationId);
         validateReservationOwner(reservation, name);
         final LocalDate date = reservation.getDate();
-        validateDate(date);
+        validateFutureOrPresentDate(date);
         final ReservationTime reservationTime = reservation.getTime();
-        validateReservationTime(date, reservationTime);
+        validateFutureOrPresentTime(date, reservationTime);
         delete(reservationId);
     }
 
@@ -108,8 +108,8 @@ public class ReservationService {
 
         final LocalDate originalDate = originalReservation.getDate();
         final ReservationTime originalTime = originalReservation.getTime();
-        validateDate(originalDate);
-        validateReservationTime(originalDate, originalTime);
+        validateFutureOrPresentDate(originalDate);
+        validateFutureOrPresentTime(originalDate, originalTime);
 
         final Long timeId = Objects.requireNonNullElse(
                 reservationModifyRequest.timeId(),
@@ -122,8 +122,8 @@ public class ReservationService {
         );
 
         final LocalDate date = modifiedReservation.getDate();
-        validateDate(date);
-        validateReservationTime(date, reservationTime);
+        validateFutureOrPresentDate(date);
+        validateFutureOrPresentTime(date, reservationTime);
         validateAvailable(date, timeId, modifiedReservation.getTheme().getId());
 
         reservationRepository.updateDateAndTime(modifiedReservation);
@@ -167,14 +167,14 @@ public class ReservationService {
                 .orElseThrow(() -> new ReservationException(ErrorCode.THEME_NOT_FOUND));
     }
 
-    private void validateDate(final LocalDate date) {
+    private void validateFutureOrPresentDate(final LocalDate date) {
         final LocalDate today = LocalDate.now();
         if (date.isBefore(today)) {
             throw new ReservationException(ErrorCode.DATE_ALREADY_PASSED);
         }
     }
 
-    private void validateReservationTime(final LocalDate date, final ReservationTime reservationTime) {
+    private void validateFutureOrPresentTime(final LocalDate date, final ReservationTime reservationTime) {
         final LocalDate today = LocalDate.now();
         final LocalTime now = LocalTime.now();
         if (date.equals(today) && reservationTime.isBefore(now)) {
