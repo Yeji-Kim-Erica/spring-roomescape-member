@@ -25,6 +25,7 @@
     - [테마 추가](#테마-추가)
     - [테마 삭제](#테마-삭제)
 - [페이지 라우팅](#페이지-라우팅)
+- [에러 응답 명세](#에러-응답-명세)
 
 ---
 
@@ -373,3 +374,56 @@ DELETE /themes/{theme-id}
 | `GET /` | 홈 화면 (인기 테마 목록) |
 | `GET /reservations` | 예약 화면 (날짜·테마·시간 선택) |
 | `GET /admin` | 관리자 화면 (예약·시간·테마 관리) |
+
+---
+
+## 에러 응답 명세
+
+API 요청 실패 시, 클라이언트는 HTTP 상태 코드와 함께 다음과 같은 형식의 JSON 응답을 받습니다.
+
+**응답 본문 형식**
+
+```json
+{
+  "code": "ERROR_CODE_NAME",
+  "detail": "서버에서 제공하는 에러 상세 메시지"
+}
+```
+
+**전체 에러 코드 목록**
+
+### 시스템 에러
+| HTTP 상태 코드 | `code` (ErrorCode) | `detail` (메시지) |
+|:---:|:---|:---|
+| 500 Internal Server Error | `INTERNAL_SERVER_ERROR` | 서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요. |
+| 405 Method Not Allowed | `METHOD_NOT_ALLOWED` | 지원하지 않는 HTTP 메서드입니다. |
+
+### 비즈니스 에러
+| HTTP 상태 코드 | `code` (ErrorCode)      | `detail` (메시지)          |
+|:---:|:------------------------|:------------------------|
+| 400 Bad Request | `TIME_ALREADY_RESERVED` | 해당 시간대에 이미 예약이 존재합니다.   |
+| 400 Bad Request | `DATE_ALREADY_PASSED`   | 이미 지난 날짜입니다.            |
+| 400 Bad Request | `TIME_ALREADY_PASSED`   | 이미 지난 시간입니다.            |
+| 403 Forbidden | `USER_NAME_NOT_MATCHED` | 예약자와 사용자 이름이 일치하지 않습니다. |
+| 404 Not Found | `THEME_NOT_FOUND`       | 해당 테마 정보를 찾을 수 없습니다.    |
+| 404 Not Found | `TIME_NOT_FOUND`        | 해당 예약 시간 정보를 찾을 수 없습니다. |
+| 404 Not Found | `RESERVATION_NOT_FOUND` | 해당 예약 정보를 찾을 수 없습니다.    |
+| 409 Conflict | `TIME_HAS_RESERVATION`  | 해당 시간대에 잔여 예약이 존재합니다.   |
+| 409 Conflict | `THEME_HAS_RESERVATION` | 해당 테마에 잔여 예약이 존재합니다.    |
+
+### 검증 에러 (400 Bad Request)
+| HTTP 상태 코드 | `code` (ErrorCode) | `detail` (메시지) |
+|:---:|:---|:---|
+| 400 Bad Request | `INVALID_INPUT_VALUE` | 입력값이 유효하지 않습니다. |
+| 400 Bad Request | `RESERVATION_ID_NULL` | 예약 ID는 비워둘 수 없습니다. |
+| 400 Bad Request | `PERSON_NAME_NULL_OR_BLANK` | 예약자 이름은 비워둘 수 없습니다. |
+| 400 Bad Request | `DATE_NULL` | 날짜는 비워둘 수 없습니다. |
+| 400 Bad Request | `INVALID_DATE_TIME_FORMAT` | 날짜 또는 시간 형식이 올바르지 않습니다. (날짜 지정 형식: yyyy-mm-dd, 시간 지정 형식: hh:mm) |
+| 400 Bad Request | `TIME_ID_NULL` | 예약 시간 ID는 비워둘 수 없습니다. |
+| 400 Bad Request | `START_TIME_NULL` | 시작 시간은 비워둘 수 없습니다. |
+| 400 Bad Request | `END_TIME_NULL` | 종료 시간은 비워둘 수 없습니다. |
+| 400 Bad Request | `THEME_ID_NULL` | 테마 ID는 비워둘 수 없습니다. |
+| 400 Bad Request | `THEME_NAME_NULL_OR_BLANK` | 테마 이름은 비워둘 수 없습니다. |
+| 400 Bad Request | `DESCRIPTION_NULL_OR_BLANK` | 테마 설명은 비워둘 수 없습니다. |
+| 400 Bad Request | `DESCRIPTION_TOO_SHORT` | 테마 설명은 최소 5자 이상이어야 합니다. |
+| 400 Bad Request | `THUMBNAIL_URL_NULL_OR_BLANK` | 테마 썸네일 URL은 비워둘 수 없습니다. |

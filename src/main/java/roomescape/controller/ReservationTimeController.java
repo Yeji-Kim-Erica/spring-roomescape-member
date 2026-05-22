@@ -1,12 +1,13 @@
 package roomescape.controller;
 
+import jakarta.validation.Valid;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import roomescape.service.ReservationTimeService;
-import roomescape.service.dto.request.ReservationTimeCreateRequest;
-import roomescape.service.dto.response.ReservationTimeResponse;
+import roomescape.service.dto.command.ReservationTimeCreateCommand;
+import roomescape.service.dto.result.ReservationTimeResult;
 
 import java.util.List;
 
@@ -18,16 +19,16 @@ public class ReservationTimeController {
     private final ReservationTimeService reservationTimeService;
 
     @GetMapping
-    public ResponseEntity<List<ReservationTimeResponse>> getTimes() {
-        final List<ReservationTimeResponse> results = reservationTimeService.getTimes();
+    public ResponseEntity<List<ReservationTimeResult>> getTimes() {
+        final List<ReservationTimeResult> results = reservationTimeService.getTimes();
         return ResponseEntity.ok(results);
     }
 
     @PostMapping
-    public ResponseEntity<ReservationTimeResponse> create(
-            @RequestBody ReservationTimeCreateRequest request
+    public ResponseEntity<ReservationTimeResult> create(
+            @Valid @RequestBody ReservationTimeCreateCommand request
     ) {
-        final ReservationTimeResponse result = reservationTimeService.create(request);
+        final ReservationTimeResult result = reservationTimeService.create(request);
         return ResponseEntity.created(URI.create("/times/" + result.id()))
                 .body(result);
     }

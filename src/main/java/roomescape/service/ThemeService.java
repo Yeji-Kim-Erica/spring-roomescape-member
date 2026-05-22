@@ -3,12 +3,13 @@ package roomescape.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import roomescape.domain.Theme;
-import roomescape.domain.dto.ThemeCreateData;
+import roomescape.exception.ErrorCode;
+import roomescape.exception.ThemeException;
+import roomescape.repository.ReservationRepository;
 import roomescape.repository.ThemeRepository;
-import roomescape.service.dto.request.ThemeCreateRequest;
-import roomescape.service.dto.response.ThemeResponse;
+import roomescape.service.dto.command.ThemeCreateCommand;
+import roomescape.service.dto.result.ThemeResult;
 
-import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -17,61 +18,58 @@ import java.util.List;
 public class ThemeService {
 
     private final ThemeRepository themeRepository;
-    private final Clock clock;
+    private final ReservationRepository reservationRepository;
 
     private static final int DATA_RANGE = 7;
 
-    public ThemeResponse create(final ThemeCreateRequest request) {
+    public ThemeResult create(final ThemeCreateCommand request) {
         final Theme themeWithoutId = Theme.create(
-                new ThemeCreateData(
-                        request.name(),
-                        request.description(),
-                        request.thumbnailUrl()
-                )
+                request.name(),
+                request.description(),
+                request.thumbnailUrl()
         );
 
         Theme theme = themeRepository.save(themeWithoutId);
 
-        return new ThemeResponse(
+        return mapDomainToDto(theme);
+    }
+
+    public void delete(final Long themeId) {
+        final boolean hasAnyOngoingReservation = reservationRepository.existsByThemeId(themeId);
+        if (hasAnyOngoingReservation) {
+            throw new ThemeException(ErrorCode.THEME_HAS_RESERVATION);
+        }
+
+        boolean deleted = themeRepository.deleteById(themeId);
+
+        if (!deleted) {
+            throw new ThemeException(ErrorCode.THEME_NOT_FOUND);
+        }
+    }
+
+    public List<ThemeResult> getPopularThemes() {
+        final LocalDate today = LocalDate.now();
+        final LocalDate startDate = today.minusDays(DATA_RANGE);
+
+        return themeRepository.findPopularThemes(startDate, today)
+                .stream()
+                .map(ThemeService::mapDomainToDto)
+                .toList();
+    }
+
+    public List<ThemeResult> getThemes() {
+        return themeRepository.findAll()
+                .stream()
+                .map(ThemeService::mapDomainToDto)
+                .toList();
+    }
+
+    private static ThemeResult mapDomainToDto(Theme theme) {
+        return new ThemeResult(
                 theme.getId(),
                 theme.getName(),
                 theme.getDescription(),
                 theme.getThumbnailUrl()
         );
-    }
-
-    public void delete(final Long themeId) {
-        boolean deleted = themeRepository.deleteById(themeId);
-
-        if (!deleted) {
-            throw new IllegalArgumentException("존재하지 않는 테마입니다.");
-        }
-    }
-
-    public List<ThemeResponse> getPopularThemes() {
-        final LocalDate today = LocalDate.now(clock);
-        final LocalDate startDate = today.minusDays(DATA_RANGE);
-
-        return themeRepository.findPopularThemes(startDate, today)
-                .stream()
-                .map(theme -> new ThemeResponse(
-                        theme.getId(),
-                        theme.getName(),
-                        theme.getDescription(),
-                        theme.getThumbnailUrl()
-                ))
-                .toList();
-    }
-
-    public List<ThemeResponse> getThemes() {
-        return themeRepository.findAll()
-                .stream()
-                .map(theme -> new ThemeResponse(
-                        theme.getId(),
-                        theme.getName(),
-                        theme.getDescription(),
-                        theme.getThumbnailUrl()
-                ))
-                .toList();
     }
 }
