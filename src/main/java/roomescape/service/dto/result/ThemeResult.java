@@ -1,6 +1,6 @@
-package roomescape.service.dto.response;
+package roomescape.service.dto.result;
 
-public record ThemeResponse(
+public record ThemeResult(
         Long id,
         String name,
         String description,

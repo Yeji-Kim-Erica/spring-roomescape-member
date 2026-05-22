@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import roomescape.ClearDbTest;
-import roomescape.service.dto.response.AvailableDateResponse;
-import roomescape.service.dto.response.ReservationResponse;
-import roomescape.service.dto.response.ReservationTimeStatusResponse;
+import roomescape.service.dto.result.AvailableDateResult;
+import roomescape.service.dto.result.ReservationResult;
+import roomescape.service.dto.result.ReservationTimeStatusResult;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,11 +30,11 @@ class ReservationControllerTest {
 
     @Test
     void 전체_날짜_조회() {
-        AvailableDateResponse responses = RestAssured.given().log().all()
+        AvailableDateResult responses = RestAssured.given().log().all()
                 .when().get("/reservations/available-dates")
                 .then().log().all()
                 .statusCode(200).extract()
-                .jsonPath().getObject(".", AvailableDateResponse.class);
+                .jsonPath().getObject(".", AvailableDateResult.class);
 
         final LocalDate expectedStartDate = TODAY;
         final LocalDate expectedEndDate = expectedStartDate.plusDays(14 - 1);
@@ -62,7 +62,7 @@ class ReservationControllerTest {
         jdbcTemplate.update("INSERT INTO theme (name, description, thumbnail_url) VALUES (?, ?, ?)", "링", "공포 테마", "http:~");
 
         // 예약 전
-        List<ReservationTimeStatusResponse> timeStatusesBeforeReservation = getReservationTimeStatusResponses();
+        List<ReservationTimeStatusResult> timeStatusesBeforeReservation = getReservationTimeStatusResponses();
         assertThat(timeStatusesBeforeReservation).hasSize(5);
         assertThat(countReservableTimes(timeStatusesBeforeReservation)).isEqualTo(5);
 
@@ -70,7 +70,7 @@ class ReservationControllerTest {
         jdbcTemplate.update("INSERT INTO reservation (name, date, time_id, theme_id) VALUES (?, ?, ?, ?)", "브라운", STRING_TOMORROW, "1", "1");
 
         // 예약 후
-        List<ReservationTimeStatusResponse> timeStatusesAfterReservation = getReservationTimeStatusResponses();
+        List<ReservationTimeStatusResult> timeStatusesAfterReservation = getReservationTimeStatusResponses();
         assertThat(timeStatusesAfterReservation).hasSize(5);
         assertThat(countReservableTimes(timeStatusesAfterReservation)).isEqualTo(4);
     }
@@ -81,14 +81,14 @@ class ReservationControllerTest {
         jdbcTemplate.update("INSERT INTO theme (name, description, thumbnail_url) VALUES (?, ?, ?)", "링", "공포 테마", "http:~");
         jdbcTemplate.update("INSERT INTO reservation (name, date, time_id, theme_id) VALUES (?, ?, ?, ?)", "브라운", STRING_TOMORROW, "1", "1");
 
-        List<ReservationResponse> reservations = RestAssured.given().log().all()
+        List<ReservationResult> reservations = RestAssured.given().log().all()
                 .when().get("/reservations?name=브라운")
                 .then().log().all()
                 .statusCode(200).extract()
-                .jsonPath().getList(".", ReservationResponse.class);
+                .jsonPath().getList(".", ReservationResult.class);
 
         assertThat(reservations).hasSize(1);
-        ReservationResponse response = reservations.getFirst();
+        ReservationResult response = reservations.getFirst();
         assertThat(response.id()).isEqualTo(1);
         assertThat(response.name()).isEqualTo("브라운");
         assertThat(response.date()).isEqualTo(TOMORROW);
@@ -107,13 +107,13 @@ class ReservationControllerTest {
         params.put("timeId", 1);
         params.put("themeId", 1);
 
-        ReservationResponse response = RestAssured.given().log().all()
+        ReservationResult response = RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/reservations")
                 .then().log().all()
                 .statusCode(201).extract()
-                .jsonPath().getObject(".", ReservationResponse.class);
+                .jsonPath().getObject(".", ReservationResult.class);
 
         assertThat(response.id()).isEqualTo(1);
         assertThat(response.name()).isEqualTo("브라운");
@@ -147,11 +147,18 @@ class ReservationControllerTest {
         jdbcTemplate.update("INSERT INTO theme (name, description, thumbnail_url) VALUES (?, ?, ?)", "링", "공포 테마", "http:~");
         jdbcTemplate.update("INSERT INTO reservation (name, date, time_id, theme_id) VALUES (?, ?, ?, ?)", "브라운", STRING_TOMORROW, "1", "1");
 
-        ReservationResponse reservation = RestAssured.given().log().all()
-                .when().patch("/reservations/1?name=브라운&date=" + STRING_TOMORROW + "&timeId=2")
+        Map<String, Object> params = new HashMap<>();
+        params.put("name", "브라운");
+        params.put("date", STRING_TOMORROW);
+        params.put("timeId", 2);
+
+        ReservationResult reservation = RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(params)
+                .when().patch("/reservations/1")
                 .then().log().all()
                 .statusCode(200).extract()
-                .jsonPath().getObject(".", ReservationResponse.class);
+                .jsonPath().getObject(".", ReservationResult.class);
 
         assertThat(reservation.id()).isEqualTo(1);
         assertThat(reservation.name()).isEqualTo("브라운");
@@ -160,17 +167,17 @@ class ReservationControllerTest {
         assertThat(reservation.theme().id()).isEqualTo(1);
     }
 
-    private static List<ReservationTimeStatusResponse> getReservationTimeStatusResponses() {
+    private static List<ReservationTimeStatusResult> getReservationTimeStatusResponses() {
         return RestAssured.given().log().all()
                 .when().get("/reservations/available-times?date=" + STRING_TOMORROW + "&themeId=1")
                 .then().log().all()
                 .statusCode(200).extract()
-                .jsonPath().getList(".", ReservationTimeStatusResponse.class);
+                .jsonPath().getList(".", ReservationTimeStatusResult.class);
     }
 
-    private static int countReservableTimes(final List<ReservationTimeStatusResponse> timeStatuses) {
+    private static int countReservableTimes(final List<ReservationTimeStatusResult> timeStatuses) {
         int count = 0;
-        for (final ReservationTimeStatusResponse timeStatus : timeStatuses) {
+        for (final ReservationTimeStatusResult timeStatus : timeStatuses) {
             if (!timeStatus.reserved()) {
                 count++;
             }

@@ -19,8 +19,8 @@ import roomescape.exception.ErrorCode;
 import roomescape.exception.ReservationTimeException;
 import roomescape.repository.ReservationRepository;
 import roomescape.repository.ReservationTimeRepository;
-import roomescape.service.dto.request.ReservationTimeCreateRequest;
-import roomescape.service.dto.response.ReservationTimeResponse;
+import roomescape.service.dto.command.ReservationTimeCreateCommand;
+import roomescape.service.dto.result.ReservationTimeResult;
 
 @ExtendWith(MockitoExtension.class)
 class ReservationTimeServiceTest {
@@ -42,7 +42,7 @@ class ReservationTimeServiceTest {
         given(reservationTimeRepository.findAll()).willReturn(List.of(time1, time2));
 
         // when
-        List<ReservationTimeResponse> responses = reservationTimeService.getTimes();
+        List<ReservationTimeResult> responses = reservationTimeService.getTimes();
 
         // then
         assertThat(responses).hasSize(2);
@@ -57,13 +57,13 @@ class ReservationTimeServiceTest {
         // given
         LocalTime startAt = LocalTime.of(10, 0);
         LocalTime endAt = LocalTime.of(11, 0);
-        ReservationTimeCreateRequest request = new ReservationTimeCreateRequest(startAt, endAt);
+        ReservationTimeCreateCommand request = new ReservationTimeCreateCommand(startAt, endAt);
 
         ReservationTime savedTime = ReservationTime.createWithId(1L, startAt, endAt);
         given(reservationTimeRepository.save(any(ReservationTime.class))).willReturn(savedTime);
 
         // when
-        ReservationTimeResponse response = reservationTimeService.create(request);
+        ReservationTimeResult response = reservationTimeService.create(request);
 
         // then
         assertThat(response.id()).isEqualTo(1L);

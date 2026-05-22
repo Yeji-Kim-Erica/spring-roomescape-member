@@ -25,10 +25,10 @@ import roomescape.repository.ReservationRepository;
 import roomescape.repository.ReservationTimeRepository;
 import roomescape.repository.ThemeRepository;
 import roomescape.repository.dto.ReservationTimesWithStatus;
-import roomescape.service.dto.request.ReservationCreateRequest;
-import roomescape.service.dto.request.ReservationModifyRequest;
-import roomescape.service.dto.response.ReservationResponse;
-import roomescape.service.dto.response.ReservationTimeStatusResponse;
+import roomescape.service.dto.command.ReservationCreateCommand;
+import roomescape.service.dto.command.ReservationModifyCommand;
+import roomescape.service.dto.result.ReservationResult;
+import roomescape.service.dto.result.ReservationTimeStatusResult;
 
 @ExtendWith(MockitoExtension.class)
 class ReservationServiceTest {
@@ -59,7 +59,7 @@ class ReservationServiceTest {
     @Test
     void 예약_생성() {
         // given
-        ReservationCreateRequest request = new ReservationCreateRequest("오리", futureDate, 1L, 1L);
+        ReservationCreateCommand request = new ReservationCreateCommand("오리", futureDate, 1L, 1L);
 
         given(reservationTimeRepository.findById(1L)).willReturn(Optional.of(time));
         given(themeRepository.findById(1L)).willReturn(Optional.of(theme));
@@ -69,7 +69,7 @@ class ReservationServiceTest {
         given(reservationRepository.save(any(Reservation.class))).willReturn(savedReservation);
 
         // when
-        ReservationResponse response = reservationService.create(request);
+        ReservationResult response = reservationService.create(request);
 
         // then
         assertThat(response.id()).isEqualTo(1L);
@@ -82,7 +82,7 @@ class ReservationServiceTest {
     void 과거_날짜로_예약_생성_시도시_예외발생() {
         // given
         LocalDate pastDate = LocalDate.now().minusDays(1);
-        ReservationCreateRequest request = new ReservationCreateRequest("오리", pastDate, 1L, 1L);
+        ReservationCreateCommand request = new ReservationCreateCommand("오리", pastDate, 1L, 1L);
 
         // when & then
         assertThatThrownBy(() -> reservationService.create(request))
@@ -93,7 +93,7 @@ class ReservationServiceTest {
     @Test
     void 중복예약_시도시_예외발생() {
         // given
-        ReservationCreateRequest request = new ReservationCreateRequest("오리", futureDate, 1L, 1L);
+        ReservationCreateCommand request = new ReservationCreateCommand("오리", futureDate, 1L, 1L);
 
         given(reservationTimeRepository.findById(1L)).willReturn(Optional.of(time));
         given(themeRepository.findById(1L)).willReturn(Optional.of(theme));
@@ -135,7 +135,7 @@ class ReservationServiceTest {
     @Test
     void 변경을_시도하는_사용자명과_예약자명_일치시_예약_변경() {
         // given
-        ReservationModifyRequest request = new ReservationModifyRequest(1L, "오리", futureDate.plusDays(1), 2L);
+        ReservationModifyCommand request = new ReservationModifyCommand(1L, "오리", futureDate.plusDays(1), 2L);
         Reservation originalReservation = Reservation.createWithId(1L, "오리", futureDate, time, theme);
         ReservationTime newTime = ReservationTime.createWithId(2L, LocalTime.of(13, 0), LocalTime.of(14, 0));
 
@@ -144,7 +144,7 @@ class ReservationServiceTest {
         given(reservationRepository.existsByDateAndTimeIdAndThemeId(request.date(), 2L, theme.getId())).willReturn(false);
 
         // when
-        ReservationResponse response = reservationService.modify(request);
+        ReservationResult response = reservationService.modify(request);
 
         // then
         assertThat(response.date()).isEqualTo(request.date());
@@ -155,7 +155,7 @@ class ReservationServiceTest {
     @Test
     void 변경을_시도하는_사용자명과_예약자명_불일치시_예외발생() {
         // given
-        ReservationModifyRequest request = new ReservationModifyRequest(1L, "리오", futureDate.plusDays(1), 2L);
+        ReservationModifyCommand request = new ReservationModifyCommand(1L, "리오", futureDate.plusDays(1), 2L);
         Reservation originalReservation = Reservation.createWithId(1L, "오리", futureDate, time, theme);
 
         given(reservationRepository.findById(1L)).willReturn(Optional.of(originalReservation));
@@ -176,7 +176,7 @@ class ReservationServiceTest {
                 .willReturn(List.of(status1, status2));
 
         // when
-        List<ReservationTimeStatusResponse> responses = reservationService.getReservationTimeStatuses(futureDate, 1L);
+        List<ReservationTimeStatusResult> responses = reservationService.getReservationTimeStatuses(futureDate, 1L);
 
         // then
         assertThat(responses).hasSize(2);

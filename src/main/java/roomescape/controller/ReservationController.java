@@ -5,12 +5,13 @@ import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import roomescape.controller.dto.ReservationModifyRequest;
 import roomescape.service.ReservationService;
-import roomescape.service.dto.request.ReservationCreateRequest;
-import roomescape.service.dto.request.ReservationModifyRequest;
-import roomescape.service.dto.response.AvailableDateResponse;
-import roomescape.service.dto.response.ReservationResponse;
-import roomescape.service.dto.response.ReservationTimeStatusResponse;
+import roomescape.service.dto.command.ReservationCreateCommand;
+import roomescape.service.dto.command.ReservationModifyCommand;
+import roomescape.service.dto.result.AvailableDateResult;
+import roomescape.service.dto.result.ReservationResult;
+import roomescape.service.dto.result.ReservationTimeStatusResult;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -23,31 +24,31 @@ public class ReservationController {
     private final ReservationService reservationService;
 
     @GetMapping("/available-dates")
-    public ResponseEntity<AvailableDateResponse> getAvailableDates() {
-        final AvailableDateResponse results = reservationService.getReservationOptions();
+    public ResponseEntity<AvailableDateResult> getAvailableDates() {
+        final AvailableDateResult results = reservationService.getReservationOptions();
         return ResponseEntity.ok(results);
     }
 
     @GetMapping(path = "/available-times")
-    public ResponseEntity<List<ReservationTimeStatusResponse>> getReservationTimeStatuses(
+    public ResponseEntity<List<ReservationTimeStatusResult>> getReservationTimeStatuses(
             @RequestParam("date") LocalDate date,
             @RequestParam("themeId") Long themeId
     ) {
-        final List<ReservationTimeStatusResponse> results = reservationService.getReservationTimeStatuses(date, themeId);
+        final List<ReservationTimeStatusResult> results = reservationService.getReservationTimeStatuses(date, themeId);
         return ResponseEntity.ok(results);
     }
 
     @GetMapping
-    public ResponseEntity<List<ReservationResponse>> getReservationsByName(@RequestParam("name") String name) {
-        final List<ReservationResponse> results = reservationService.getReservationsByName(name);
+    public ResponseEntity<List<ReservationResult>> getReservationsByName(@RequestParam("name") String name) {
+        final List<ReservationResult> results = reservationService.getReservationsByName(name);
         return ResponseEntity.ok(results);
     }
 
     @PostMapping
-    public ResponseEntity<ReservationResponse> create(
-            @Valid @RequestBody ReservationCreateRequest request
+    public ResponseEntity<ReservationResult> create(
+            @Valid @RequestBody ReservationCreateCommand request
     ) {
-        final ReservationResponse result = reservationService.create(request);
+        final ReservationResult result = reservationService.create(request);
         return ResponseEntity.created(URI.create("/reservations/" + result.id()))
                 .body(result);
     }
@@ -62,15 +63,17 @@ public class ReservationController {
     }
 
     @PatchMapping("/{reservation-id}")
-    public ResponseEntity<ReservationResponse> modify(
+    public ResponseEntity<ReservationResult> modify(
             @PathVariable("reservation-id") Long reservationId,
-            @RequestParam("name") String name,
-            @RequestParam(value = "date", required = false) LocalDate date,
-            @RequestParam(value = "timeId", required = false) Long timeId
+            @Valid @RequestBody ReservationModifyRequest reservationModifyRequest
     ) {
-        final ReservationModifyRequest reservationModifyRequest = new ReservationModifyRequest(
-                reservationId, name, date, timeId);
-        final ReservationResponse result = reservationService.modify(reservationModifyRequest);
+        final ReservationModifyCommand reservationModifyCommand = new ReservationModifyCommand(
+                reservationId,
+                reservationModifyRequest.name(),
+                reservationModifyRequest.date(),
+                reservationModifyRequest.timeId()
+        );
+        final ReservationResult result = reservationService.modify(reservationModifyCommand);
         return ResponseEntity.ok(result);
     }
 }

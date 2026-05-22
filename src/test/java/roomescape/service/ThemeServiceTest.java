@@ -19,8 +19,8 @@ import roomescape.exception.ErrorCode;
 import roomescape.exception.ThemeException;
 import roomescape.repository.ReservationRepository;
 import roomescape.repository.ThemeRepository;
-import roomescape.service.dto.request.ThemeCreateRequest;
-import roomescape.service.dto.response.ThemeResponse;
+import roomescape.service.dto.command.ThemeCreateCommand;
+import roomescape.service.dto.result.ThemeResult;
 
 @ExtendWith(MockitoExtension.class)
 class ThemeServiceTest {
@@ -36,13 +36,13 @@ class ThemeServiceTest {
     @Test
     void 테마_생성() {
         // given
-        ThemeCreateRequest request = new ThemeCreateRequest("우주 탈출", "우주선에서 탈출하는 재미있는 테마입니다.", "https://example.com/space.jpg");
+        ThemeCreateCommand request = new ThemeCreateCommand("우주 탈출", "우주선에서 탈출하는 재미있는 테마입니다.", "https://example.com/space.jpg");
         Theme savedTheme = Theme.createWithId(1L, "우주 탈출", "우주선에서 탈출하는 재미있는 테마입니다.", "https://example.com/space.jpg");
 
         given(themeRepository.save(any(Theme.class))).willReturn(savedTheme);
 
         // when
-        ThemeResponse response = themeService.create(request);
+        ThemeResult response = themeService.create(request);
 
         // then
         assertThat(response.id()).isEqualTo(1L);
@@ -100,7 +100,7 @@ class ThemeServiceTest {
                 .willReturn(List.of(theme1, theme2));
 
         // when
-        List<ThemeResponse> responses = themeService.getPopularThemes();
+        List<ThemeResult> responses = themeService.getPopularThemes();
 
         // then
         assertThat(responses).hasSize(2);
@@ -118,7 +118,7 @@ class ThemeServiceTest {
         given(themeRepository.findAll()).willReturn(List.of(theme));
 
         // when
-        List<ThemeResponse> responses = themeService.getThemes();
+        List<ThemeResult> responses = themeService.getThemes();
 
         // then
         assertThat(responses).hasSize(1);

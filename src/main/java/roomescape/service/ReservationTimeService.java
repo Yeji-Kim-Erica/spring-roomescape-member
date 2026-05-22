@@ -7,8 +7,8 @@ import roomescape.exception.ErrorCode;
 import roomescape.exception.ReservationTimeException;
 import roomescape.repository.ReservationRepository;
 import roomescape.repository.ReservationTimeRepository;
-import roomescape.service.dto.request.ReservationTimeCreateRequest;
-import roomescape.service.dto.response.ReservationTimeResponse;
+import roomescape.service.dto.command.ReservationTimeCreateCommand;
+import roomescape.service.dto.result.ReservationTimeResult;
 
 import java.util.List;
 
@@ -19,14 +19,14 @@ public class ReservationTimeService {
     private final ReservationTimeRepository reservationTimeRepository;
     private final ReservationRepository reservationRepository;
 
-    public List<ReservationTimeResponse> getTimes() {
+    public List<ReservationTimeResult> getTimes() {
         return reservationTimeRepository.findAll()
                 .stream()
                 .map(ReservationTimeService::mapDomainToDto)
                 .toList();
     }
 
-    public ReservationTimeResponse create(ReservationTimeCreateRequest data) {
+    public ReservationTimeResult create(ReservationTimeCreateCommand data) {
         final ReservationTime reservationTime = ReservationTime.create(
                 data.startAt(),
                 data.endAt()
@@ -50,8 +50,8 @@ public class ReservationTimeService {
         }
     }
 
-    private static ReservationTimeResponse mapDomainToDto(ReservationTime reservationTime) {
-        return new ReservationTimeResponse(
+    private static ReservationTimeResult mapDomainToDto(ReservationTime reservationTime) {
+        return new ReservationTimeResult(
                 reservationTime.getId(),
                 reservationTime.getStartAt(),
                 reservationTime.getEndAt()

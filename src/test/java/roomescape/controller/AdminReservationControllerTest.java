@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import roomescape.ClearDbTest;
-import roomescape.service.dto.response.ReservationResponse;
+import roomescape.service.dto.result.ReservationResult;
 
 @ClearDbTest
 class AdminReservationControllerTest {
@@ -24,21 +24,21 @@ class AdminReservationControllerTest {
         jdbcTemplate.update("INSERT INTO reservation (name, date, time_id, theme_id) VALUES (?, ?, ?, ?)", "브라운", "2026-05-05", "1", "1");
         jdbcTemplate.update("INSERT INTO reservation (name, date, time_id, theme_id) VALUES (?, ?, ?, ?)", "류시", "2026-05-06", "1", "1");
 
-        List<ReservationResponse> reservations = RestAssured.given().log().all()
+        List<ReservationResult> reservations = RestAssured.given().log().all()
                 .when().get("/admin/reservations")
                 .then().log().all()
                 .statusCode(200).extract()
-                .jsonPath().getList(".", ReservationResponse.class);
+                .jsonPath().getList(".", ReservationResult.class);
 
         assertThat(reservations).hasSize(2);
-        ReservationResponse reservation1 = reservations.getFirst();
+        ReservationResult reservation1 = reservations.getFirst();
         assertThat(reservation1.id()).isEqualTo(1);
         assertThat(reservation1.name()).isEqualTo("브라운");
         assertThat(reservation1.date()).isEqualTo(LocalDate.of(2026, 5, 5));
         assertThat(reservation1.time().id()).isEqualTo(1);
         assertThat(reservation1.theme().id()).isEqualTo(1);
 
-        ReservationResponse reservation2 = reservations.get(1);
+        ReservationResult reservation2 = reservations.get(1);
         assertThat(reservation2.id()).isEqualTo(2);
         assertThat(reservation2.name()).isEqualTo("류시");
         assertThat(reservation2.date()).isEqualTo(LocalDate.of(2026, 5, 6));

@@ -7,8 +7,8 @@ import roomescape.exception.ErrorCode;
 import roomescape.exception.ThemeException;
 import roomescape.repository.ReservationRepository;
 import roomescape.repository.ThemeRepository;
-import roomescape.service.dto.request.ThemeCreateRequest;
-import roomescape.service.dto.response.ThemeResponse;
+import roomescape.service.dto.command.ThemeCreateCommand;
+import roomescape.service.dto.result.ThemeResult;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,7 +22,7 @@ public class ThemeService {
 
     private static final int DATA_RANGE = 7;
 
-    public ThemeResponse create(final ThemeCreateRequest request) {
+    public ThemeResult create(final ThemeCreateCommand request) {
         final Theme themeWithoutId = Theme.create(
                 request.name(),
                 request.description(),
@@ -47,7 +47,7 @@ public class ThemeService {
         }
     }
 
-    public List<ThemeResponse> getPopularThemes() {
+    public List<ThemeResult> getPopularThemes() {
         final LocalDate today = LocalDate.now();
         final LocalDate startDate = today.minusDays(DATA_RANGE);
 
@@ -57,15 +57,15 @@ public class ThemeService {
                 .toList();
     }
 
-    public List<ThemeResponse> getThemes() {
+    public List<ThemeResult> getThemes() {
         return themeRepository.findAll()
                 .stream()
                 .map(ThemeService::mapDomainToDto)
                 .toList();
     }
 
-    private static ThemeResponse mapDomainToDto(Theme theme) {
-        return new ThemeResponse(
+    private static ThemeResult mapDomainToDto(Theme theme) {
+        return new ThemeResult(
                 theme.getId(),
                 theme.getName(),
                 theme.getDescription(),

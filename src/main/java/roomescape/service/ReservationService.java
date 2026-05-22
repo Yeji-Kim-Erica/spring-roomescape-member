@@ -12,13 +12,13 @@ import roomescape.exception.ReservationException;
 import roomescape.repository.ReservationRepository;
 import roomescape.repository.ReservationTimeRepository;
 import roomescape.repository.ThemeRepository;
-import roomescape.service.dto.request.ReservationCreateRequest;
-import roomescape.service.dto.request.ReservationModifyRequest;
-import roomescape.service.dto.response.AvailableDateResponse;
-import roomescape.service.dto.response.ReservationResponse;
-import roomescape.service.dto.response.ReservationTimeResponse;
-import roomescape.service.dto.response.ReservationTimeStatusResponse;
-import roomescape.service.dto.response.ThemeResponse;
+import roomescape.service.dto.command.ReservationCreateCommand;
+import roomescape.service.dto.command.ReservationModifyCommand;
+import roomescape.service.dto.result.AvailableDateResult;
+import roomescape.service.dto.result.ReservationResult;
+import roomescape.service.dto.result.ReservationTimeResult;
+import roomescape.service.dto.result.ReservationTimeStatusResult;
+import roomescape.service.dto.result.ThemeResult;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -33,17 +33,17 @@ public class ReservationService {
 
     private static final int RESERVABLE_DAYS_RANGE = 14;
 
-    public List<ReservationResponse> getReservations() {
+    public List<ReservationResult> getReservations() {
         return reservationRepository.findAll()
                 .stream()
                 .map(ReservationService::mapDomainToDto)
                 .toList();
     }
 
-    public List<ReservationTimeStatusResponse> getReservationTimeStatuses(final LocalDate date, final Long themeId) {
+    public List<ReservationTimeStatusResult> getReservationTimeStatuses(final LocalDate date, final Long themeId) {
         return reservationRepository.findReservationTimeStatusesByDateAndThemeId(date, themeId)
                 .stream()
-                .map(reservationTimesWithStatus -> new ReservationTimeStatusResponse(
+                .map(reservationTimesWithStatus -> new ReservationTimeStatusResult(
                         reservationTimesWithStatus.id(),
                         reservationTimesWithStatus.startAt(),
                         reservationTimesWithStatus.reserved()
@@ -51,7 +51,7 @@ public class ReservationService {
                 .toList();
     }
 
-    public ReservationResponse create(final ReservationCreateRequest data) {
+    public ReservationResult create(final ReservationCreateCommand data) {
         final LocalDate date = data.date();
         validateFutureOrPresentDate(date);
         final Long timeId = data.timeId();
@@ -86,24 +86,24 @@ public class ReservationService {
         delete(reservationId);
     }
 
-    public AvailableDateResponse getReservationOptions() {
+    public AvailableDateResult getReservationOptions() {
         LocalDate today = LocalDate.now();
         List<LocalDate> dates = today.datesUntil(today.plusDays(RESERVABLE_DAYS_RANGE)).toList();
 
-        return new AvailableDateResponse(dates);
+        return new AvailableDateResult(dates);
     }
 
-    public List<ReservationResponse> getReservationsByName(final String name) {
+    public List<ReservationResult> getReservationsByName(final String name) {
         List<Reservation> reservations = reservationRepository.findByName(name);
         return reservations.stream()
                 .map(ReservationService::mapDomainToDto)
                 .toList();
     }
 
-    public ReservationResponse modify(final ReservationModifyRequest reservationModifyRequest) {
-        final Long reservationId = reservationModifyRequest.reservationId();
+    public ReservationResult modify(final ReservationModifyCommand reservationModifyCommand) {
+        final Long reservationId = reservationModifyCommand.reservationId();
         final Reservation originalReservation = getReservation(reservationId);
-        final String personName = reservationModifyRequest.name();
+        final String personName = reservationModifyCommand.name();
         validateReservationOwner(originalReservation, personName);
 
         final LocalDate originalDate = originalReservation.getDate();
@@ -112,12 +112,12 @@ public class ReservationService {
         validateFutureOrPresentTime(originalDate, originalTime);
 
         final Long timeId = Objects.requireNonNullElse(
-                reservationModifyRequest.timeId(),
+                reservationModifyCommand.timeId(),
                 originalTime.getId()
         );
         final ReservationTime reservationTime = getReservationTime(timeId);
         final Reservation modifiedReservation = originalReservation.modify(
-                reservationModifyRequest.date(),
+                reservationModifyCommand.date(),
                 reservationTime
         );
 
@@ -130,20 +130,20 @@ public class ReservationService {
         return mapDomainToDto(modifiedReservation);
     }
 
-    private static ReservationResponse mapDomainToDto(final Reservation reservation) {
+    private static ReservationResult mapDomainToDto(final Reservation reservation) {
         final ReservationTime reservationTime = reservation.getTime();
         final Theme theme = reservation.getTheme();
 
-        return new ReservationResponse(
+        return new ReservationResult(
                 reservation.getId(),
                 reservation.getName(),
                 reservation.getDate(),
-                new ReservationTimeResponse(
+                new ReservationTimeResult(
                         reservationTime.getId(),
                         reservationTime.getStartAt(),
                         reservationTime.getEndAt()
                 ),
-                new ThemeResponse(
+                new ThemeResult(
                         theme.getId(),
                         theme.getName(),
                         theme.getDescription(),

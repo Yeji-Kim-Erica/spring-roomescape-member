@@ -276,8 +276,13 @@ async function submitModifyBooking() {
   const btn = $('confirm-modify-btn');
   btn.disabled = true; btn.textContent = '변경 중...';
   try {
-    // Controller 에서는 @RequestParam 으로 받으므로 URL 파라미터로 전송
-    await api.patch(`/reservations/${state.modifyingReservationId}?name=${encodeURIComponent(state.currentName)}&date=${state.selectedDate}&timeId=${state.selectedTimeId}`);
+    const requestBody = {
+      reservationId: state.modifyingReservationId,
+      name: state.currentName,
+      date: state.selectedDate,
+      timeId: state.selectedTimeId
+    };
+    await api.patch(`/reservations/${state.modifyingReservationId}`, requestBody);
     closeModifyModal();
     showToast('예약이 성공적으로 변경되었습니다! 🎉', 'success');
     loadMyReservations();

@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import roomescape.ClearDbTest;
-import roomescape.service.dto.request.ReservationTimeCreateRequest;
-import roomescape.service.dto.response.ReservationTimeResponse;
+import roomescape.service.dto.command.ReservationTimeCreateCommand;
+import roomescape.service.dto.result.ReservationTimeResult;
 
 @ClearDbTest
 class ReservationTimeControllerTest {
@@ -24,20 +24,20 @@ class ReservationTimeControllerTest {
         jdbcTemplate.update("INSERT INTO reservation_time (start_at, end_at) VALUES (?, ?)", "10:00", "10:30");
         jdbcTemplate.update("INSERT INTO reservation_time (start_at, end_at) VALUES (?, ?)", "11:00", "11:30");
 
-        List<ReservationTimeResponse> reservationTimes = RestAssured.given().log().all()
+        List<ReservationTimeResult> reservationTimes = RestAssured.given().log().all()
                 .when().get("/times")
                 .then().log().all()
                 .statusCode(200).extract()
-                .jsonPath().getList(".", ReservationTimeResponse.class);
+                .jsonPath().getList(".", ReservationTimeResult.class);
 
         assertThat(reservationTimes).hasSize(2);
 
-        ReservationTimeResponse reservationTime1 = reservationTimes.getFirst();
+        ReservationTimeResult reservationTime1 = reservationTimes.getFirst();
         assertThat(reservationTime1.id()).isEqualTo(1);
         assertThat(reservationTime1.startAt()).isEqualTo(LocalTime.of(10, 0));
         assertThat(reservationTime1.endAt()).isEqualTo(LocalTime.of(10, 30));
 
-        ReservationTimeResponse reservationTime2 = reservationTimes.get(1);
+        ReservationTimeResult reservationTime2 = reservationTimes.get(1);
         assertThat(reservationTime2.id()).isEqualTo(2);
         assertThat(reservationTime2.startAt()).isEqualTo(LocalTime.of(11, 0));
         assertThat(reservationTime2.endAt()).isEqualTo(LocalTime.of(11, 30));
@@ -47,18 +47,18 @@ class ReservationTimeControllerTest {
     void 예약시간_생성() {
         LocalTime startAt = LocalTime.of(12, 0);
         LocalTime endAt = LocalTime.of(12, 30);
-        ReservationTimeCreateRequest request = new ReservationTimeCreateRequest(
+        ReservationTimeCreateCommand request = new ReservationTimeCreateCommand(
                 startAt, endAt
         );
 
-        ReservationTimeResponse response = RestAssured.given().log().all()
+        ReservationTimeResult response = RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
                 .body(request)
                 .when().post("/times")
                 .then().log().all()
                 .statusCode(201)
                 .header("Location", "/times/1")
-                .extract().as(ReservationTimeResponse.class);
+                .extract().as(ReservationTimeResult.class);
 
         assertThat(response.id()).isEqualTo(1);
         assertThat(response.startAt()).isEqualTo(startAt);
