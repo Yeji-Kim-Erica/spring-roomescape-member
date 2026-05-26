@@ -11,6 +11,8 @@ import roomescape.domain.ReservationTime;
 import java.sql.*;
 import java.util.List;
 import java.util.Optional;
+import roomescape.exception.ErrorCode;
+import roomescape.exception.KeyGenerationException;
 
 @Repository
 @RequiredArgsConstructor
@@ -93,7 +95,7 @@ public class ReservationTimeRepository {
         final Number generatedKey = keyHolder.getKey();
 
         if (generatedKey == null) {
-            throw new IllegalStateException("생성된 id를 가져오지 못했습니다.");
+            throw new KeyGenerationException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
         return generatedKey.longValue();

@@ -1,6 +1,7 @@
-package roomescape.service.dto.request;
+package roomescape.service.dto.result;
 
-public record ThemeCreateRequest(
+public record ThemeResult(
+        Long id,
         String name,
         String description,
         String thumbnailUrl

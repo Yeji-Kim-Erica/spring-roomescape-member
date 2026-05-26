@@ -1,9 +1,11 @@
 package roomescape.domain;
 
+import java.util.Objects;
 import lombok.Getter;
-import roomescape.domain.dto.ReservationCreateData;
 
 import java.time.LocalDate;
+import roomescape.exception.ErrorCode;
+import roomescape.exception.ReservationException;
 
 @Getter
 public class Reservation {
@@ -17,18 +19,31 @@ public class Reservation {
     private Reservation(final Long id, final PersonName name, final LocalDate date, final ReservationTime time, final Theme theme) {
         this.id = id;
         this.name = name;
+        validateDate(date);
         this.date = date;
         this.time = time;
         this.theme = theme;
     }
 
-    public static Reservation create(ReservationCreateData data) {
+    private static void validateId(final Long id) {
+        if (id == null) {
+            throw new ReservationException(ErrorCode.RESERVATION_ID_NULL);
+        }
+    }
+
+    private static void validateDate(final LocalDate date) {
+        if (date == null) {
+            throw new ReservationException(ErrorCode.DATE_NULL);
+        }
+    }
+
+    public static Reservation create(final String name, final LocalDate date, final ReservationTime time, final Theme theme) {
         return new Reservation(
                 null,
-                new PersonName(data.name()),
-                data.date(),
-                data.time(),
-                data.theme()
+                new PersonName(name),
+                date,
+                time,
+                theme
         );
     }
 
@@ -38,6 +53,7 @@ public class Reservation {
             final LocalDate date,
             final ReservationTime time,
             final Theme theme) {
+        validateId(id);
         return new Reservation(
                 id,
                 new PersonName(name),
@@ -48,16 +64,27 @@ public class Reservation {
     }
 
     public Reservation withId(final Long id) {
+        validateId(id);
         return new Reservation(
                 id,
-                name,
-                date,
-                time,
-                theme
+                this.name,
+                this.date,
+                this.time,
+                this.theme
+        );
+    }
+
+    public Reservation modify(final LocalDate newDate, final ReservationTime newReservationTime) {
+        return new Reservation(
+                this.id,
+                this.name,
+                Objects.requireNonNullElse(newDate, this.date),
+                Objects.requireNonNullElse(newReservationTime, this.time),
+                this.theme
         );
     }
 
     public String getName() {
-        return name.getName();
+        return this.name.getName();
     }
 }

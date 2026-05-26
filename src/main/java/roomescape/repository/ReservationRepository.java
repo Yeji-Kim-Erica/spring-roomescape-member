@@ -1,6 +1,8 @@
 package roomescape.repository;
 
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -8,6 +10,8 @@ import org.springframework.stereotype.Repository;
 import roomescape.domain.Reservation;
 import roomescape.domain.ReservationTime;
 import roomescape.domain.Theme;
+import roomescape.exception.ErrorCode;
+import roomescape.exception.KeyGenerationException;
 import roomescape.repository.dto.ReservationTimesWithStatus;
 
 import java.sql.*;
@@ -39,24 +43,102 @@ public class ReservationRepository {
                 ORDER BY r.id
                 """;
 
-        return jdbcTemplate.query(sql, this::mapToDomain)
+        return jdbcTemplate.query(sql, ReservationRepository::mapToDomain)
                 .stream()
                 .toList();
     }
 
-    public Reservation save(final Reservation newReservation) {
-        final long newReservationId = insertReservation(newReservation);
-
-        return newReservation.withId(newReservationId);
-    }
-
-    public boolean deleteById(final Long reservationId) {
-        final String sql = """
-                DELETE FROM reservation
-                WHERE id = ?
+    public List<Reservation> findByName(final String name) {
+        String sql = """
+                SELECT
+                    r.id AS reservation_id,
+                    r.name AS reservation_name,
+                    r.date AS reservation_date,
+                    r.theme_id AS theme_id,
+                    t.id AS time_id,
+                    t.start_at AS time_start_at,
+                    t.end_at AS time_end_at,
+                    h.name AS theme_name,
+                    h.description AS theme_description,
+                    h.thumbnail_url AS theme_thumbnail_url
+                FROM reservation r
+                JOIN reservation_time t ON r.time_id = t.id
+                JOIN theme h ON r.theme_id = h.id 
+                WHERE r.name = ?
+                ORDER BY r.id
                 """;
 
-        return jdbcTemplate.update(sql, reservationId) > 0;
+        return jdbcTemplate.query(sql, ReservationRepository::mapToDomain, name)
+                .stream()
+                .toList();
+    }
+
+    public Optional<Reservation> findById(final Long reservationId) {
+        String sql = """
+                SELECT
+                    r.id AS reservation_id,
+                    r.name AS reservation_name,
+                    r.date AS reservation_date,
+                    r.theme_id AS theme_id,
+                    t.id AS time_id,
+                    t.start_at AS time_start_at,
+                    t.end_at AS time_end_at,
+                    h.name AS theme_name,
+                    h.description AS theme_description,
+                    h.thumbnail_url AS theme_thumbnail_url
+                FROM reservation r
+                JOIN reservation_time t ON r.time_id = t.id
+                JOIN theme h ON r.theme_id = h.id 
+                WHERE r.id = ?
+                """;
+
+        try {
+            Reservation reservation = jdbcTemplate.queryForObject(
+                    sql,
+                    ReservationRepository::mapToDomain,
+                    reservationId
+            );
+
+            return Optional.of(reservation);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
+    public boolean existsByDateAndTimeIdAndThemeId(final LocalDate date, final Long timeId, final Long themeId) {
+        final String sql = """
+                SELECT COUNT(id)
+                FROM reservation
+                WHERE date = ? AND time_id = ? AND theme_id = ?
+                """;
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, date, timeId, themeId);
+
+        return count != null && count > 0;
+    }
+
+    public boolean existsByTimeId(final Long timeId) {
+        final String sql = """
+                SELECT COUNT(id)
+                FROM reservation
+                WHERE time_id = ?
+                """;
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, timeId);
+
+        return count != null && count > 0;
+    }
+
+    public boolean existsByThemeId(final Long themeId) {
+        final String sql = """
+                SELECT COUNT(id)
+                FROM reservation
+                WHERE theme_id = ?
+                """;
+
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, themeId);
+
+        return count != null && count > 0;
     }
 
     public List<ReservationTimesWithStatus> findReservationTimeStatusesByDateAndThemeId(final LocalDate date, final Long themeId) {
@@ -78,11 +160,17 @@ public class ReservationRepository {
 
         return jdbcTemplate.query(
                         sql,
-                        this::mapToTimesWithStatus,
+                        ReservationRepository::mapToTimesWithStatus,
                         date,
                         themeId
                 ).stream()
                 .toList();
+    }
+
+    public Reservation save(final Reservation newReservation) {
+        final long newReservationId = insertReservation(newReservation);
+
+        return newReservation.withId(newReservationId);
     }
 
     private long insertReservation(final Reservation reservation) {
@@ -114,16 +202,40 @@ public class ReservationRepository {
         final Number generatedKey = keyHolder.getKey();
 
         if (generatedKey == null) {
-            throw new IllegalStateException("생성된 id를 가져오지 못했습니다.");
+            throw new KeyGenerationException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
         return generatedKey.longValue();
     }
 
+    public void updateDateAndTime(final Reservation reservation) {
+        final String sql = """
+                UPDATE reservation
+                SET date = ?, time_id = ?
+                WHERE id = ?
+                """;
+
+        jdbcTemplate.update(
+                sql,
+                reservation.getDate(),
+                reservation.getTime().getId(),
+                reservation.getId()
+        );
+    }
+
+    public boolean deleteById(final Long reservationId) {
+        final String sql = """
+                DELETE FROM reservation
+                WHERE id = ?
+                """;
+
+        return jdbcTemplate.update(sql, reservationId) > 0;
+    }
+
     /**
      * ResultSet - Domain 매핑 메서드
      */
-    private Reservation mapToDomain(final ResultSet resultSet, final int rowNum) throws SQLException {
+    private static Reservation mapToDomain(final ResultSet resultSet, final int rowNum) throws SQLException {
         final ReservationTime reservationTime = ReservationTime.createWithId(
                 resultSet.getLong("time_id"),
                 resultSet.getTime("time_start_at").toLocalTime(),
@@ -149,7 +261,7 @@ public class ReservationRepository {
     /**
      * ResultSet - DTO 매핑 메서드
      */
-    private ReservationTimesWithStatus mapToTimesWithStatus(final ResultSet resultSet, final int rowNum) throws SQLException {
+    private static ReservationTimesWithStatus mapToTimesWithStatus(final ResultSet resultSet, final int rowNum) throws SQLException {
         return new ReservationTimesWithStatus(
                 resultSet.getLong("id"),
                 resultSet.getTime("start_at").toLocalTime(),

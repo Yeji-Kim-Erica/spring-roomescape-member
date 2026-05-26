@@ -1,12 +1,13 @@
 package roomescape.controller;
 
+import jakarta.validation.Valid;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import roomescape.service.ThemeService;
-import roomescape.service.dto.request.ThemeCreateRequest;
-import roomescape.service.dto.response.ThemeResponse;
+import roomescape.service.dto.command.ThemeCreateCommand;
+import roomescape.service.dto.result.ThemeResult;
 
 import java.util.List;
 
@@ -18,22 +19,22 @@ public class ThemeController {
     private final ThemeService themeService;
 
     @GetMapping
-    public ResponseEntity<List<ThemeResponse>> getThemes() {
-        final List<ThemeResponse> results = themeService.getThemes();
+    public ResponseEntity<List<ThemeResult>> getThemes() {
+        final List<ThemeResult> results = themeService.getThemes();
         return ResponseEntity.ok().body(results);
     }
 
     @GetMapping("/popular")
-    public ResponseEntity<List<ThemeResponse>> getPopularThemes() {
-        final List<ThemeResponse> results = themeService.getPopularThemes();
+    public ResponseEntity<List<ThemeResult>> getPopularThemes() {
+        final List<ThemeResult> results = themeService.getPopularThemes();
         return ResponseEntity.ok().body(results);
     }
 
     @PostMapping
-    public ResponseEntity<ThemeResponse> create(
-            @RequestBody ThemeCreateRequest request
+    public ResponseEntity<ThemeResult> create(
+            @Valid @RequestBody ThemeCreateCommand request
     ) {
-        final ThemeResponse result = themeService.create(request);
+        final ThemeResult result = themeService.create(request);
         return ResponseEntity.created(URI.create("/themes/" + result.id()))
                 .body(result);
     }

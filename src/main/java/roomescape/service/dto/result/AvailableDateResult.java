@@ -1,9 +1,9 @@
-package roomescape.service.dto.response;
+package roomescape.service.dto.result;
 
 import java.time.LocalDate;
 import java.util.List;
 
-public record AvailableDateResponse(
+public record AvailableDateResult(
         List<LocalDate> dates
 ) {
 }

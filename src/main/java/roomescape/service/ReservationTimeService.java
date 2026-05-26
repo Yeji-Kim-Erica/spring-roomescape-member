@@ -3,10 +3,12 @@ package roomescape.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import roomescape.domain.ReservationTime;
-import roomescape.domain.dto.ReservationTimeCreateData;
+import roomescape.exception.ErrorCode;
+import roomescape.exception.ReservationTimeException;
+import roomescape.repository.ReservationRepository;
 import roomescape.repository.ReservationTimeRepository;
-import roomescape.service.dto.request.ReservationTimeCreateRequest;
-import roomescape.service.dto.response.ReservationTimeResponse;
+import roomescape.service.dto.command.ReservationTimeCreateCommand;
+import roomescape.service.dto.result.ReservationTimeResult;
 
 import java.util.List;
 
@@ -15,20 +17,19 @@ import java.util.List;
 public class ReservationTimeService {
 
     private final ReservationTimeRepository reservationTimeRepository;
+    private final ReservationRepository reservationRepository;
 
-    public List<ReservationTimeResponse> getTimes() {
+    public List<ReservationTimeResult> getTimes() {
         return reservationTimeRepository.findAll()
                 .stream()
                 .map(ReservationTimeService::mapDomainToDto)
                 .toList();
     }
 
-    public ReservationTimeResponse create(ReservationTimeCreateRequest data) {
+    public ReservationTimeResult create(ReservationTimeCreateCommand data) {
         final ReservationTime reservationTime = ReservationTime.create(
-                new ReservationTimeCreateData(
-                        data.startAt(),
-                        data.endAt()
-                )
+                data.startAt(),
+                data.endAt()
         );
 
         final ReservationTime savedTime = reservationTimeRepository.save(reservationTime);
@@ -37,15 +38,20 @@ public class ReservationTimeService {
     }
 
     public void delete(final Long timeId) {
+        final boolean hasAnyOngoingReservation = reservationRepository.existsByTimeId(timeId);
+        if (hasAnyOngoingReservation) {
+            throw new ReservationTimeException(ErrorCode.TIME_HAS_RESERVATION);
+        }
+
         final boolean deleted = reservationTimeRepository.delete(timeId);
 
         if (!deleted) {
-            throw new IllegalArgumentException("존재하지 않는 예약 시간입니다.");
+            throw new ReservationTimeException(ErrorCode.TIME_NOT_FOUND);
         }
     }
 
-    private static ReservationTimeResponse mapDomainToDto(ReservationTime reservationTime) {
-        return new ReservationTimeResponse(
+    private static ReservationTimeResult mapDomainToDto(ReservationTime reservationTime) {
+        return new ReservationTimeResult(
                 reservationTime.getId(),
                 reservationTime.getStartAt(),
                 reservationTime.getEndAt()
